@@ -171,9 +171,9 @@ open test_results.html
 
 ## 👥 作者
 
-**あなたの名前** - [@your-username](https://github.com/SilentMalachite/)
+**あなたの名前** - [@SilentMalachite](https://github.com/SilentMalachite/)
 
-プロジェクトリンク: [https://github.com/your-username/UNO-like-card_game](https://github.com/SilentMalachite/UNO-like-card_game)
+プロジェクトリンク: [https://github.com/SilentMalachite/UNO-like-card_game](https://github.com/SilentMalachite/UNO-like-card_game)
 
 ## 🙏 謝辞
 
