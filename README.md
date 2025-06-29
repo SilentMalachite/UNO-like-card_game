@@ -36,7 +36,7 @@
 
 1. **ダウンロード**
    ```bash
-   git clone https://github.com/your-username/UNO-like-card_game.git
+   git clone https://github.com/SilentMalachite/UNO-like-card_game.git
    cd UNO-like-card_game
    ```
 
