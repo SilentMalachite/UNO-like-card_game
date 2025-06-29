@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNO風カードゲーム（8人対戦）</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: white;
+        }
+
+        .game-title {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .setup-screen {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+            max-width: 500px;
+        }
+
+        .setup-screen h2 {
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .player-count {
+            margin: 20px 0;
+        }
+
+        .player-count label {
+            font-size: 1.2em;
+            margin-right: 10px;
+        }
+
+        .player-count select {
+            padding: 8px 12px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 5px;
+            background: white;
+            color: #333;
+        }
+
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .player-info {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+            text-align: center;
+        }
+
+        .player-info.current-player {
+            background: rgba(241, 196, 15, 0.3);
+            border: 2px solid #f1c40f;
+        }
+
+        .player-info .player-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .player-info .card-count {
+            font-size: 1.5em;
+            color: #f1c40f;
+        }
+
+        .center-area {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin: 30px 0;
+        }
+
+        .deck {
+            width: 80px;
+            height: 120px;
+            background: #2c3e50;
+            border: 3px solid #34495e;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+            font-weight: bold;
+            color: white;
+        }
+
+        .deck:hover {
+            transform: scale(1.05);
+        }
+
+        .discard-pile {
+            width: 80px;
+            height: 120px;
+            border: 3px dashed #fff;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .card {
+            width: 80px;
+            height: 120px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid #fff;
+            font-weight: bold;
+            font-size: 1.2em;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+        }
+
+        .card.unplayable {
+            opacity: 0.4;
+            cursor: not-allowed !important;
+            filter: grayscale(50%);
+        }
+
+        .card.unplayable:hover {
+            transform: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .card.red { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .card.blue { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .card.green { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+        .card.yellow { background: linear-gradient(135deg, #f1c40f, #f39c12); }
+        .card.wild { background: linear-gradient(135deg, #2c3e50, #34495e); color: white; }
+        .card.wild-draw4 { background: linear-gradient(135deg, #8e44ad, #9b59b6); color: white; }
+
+        .card .number {
+            font-size: 2em;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .card .action {
+            font-size: 1.2em;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        .card .color-name {
+            font-size: 0.7em;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+
+        .current-hand {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1000px;
+            margin: 20px 0;
+        }
+
+        .game-controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .message {
+            background: rgba(255,255,255,0.9);
+            color: #2c3e50;
+            padding: 15px 30px;
+            border-radius: 25px;
+            margin: 15px 0;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .turn-indicator {
+            font-size: 1.8em;
+            margin: 20px 0;
+            padding: 15px 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        .winner {
+            font-size: 2em;
+            color: #f1c40f;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .input-group {
+            margin: 10px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .input-group input {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            width: 200px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .direction-indicator {
+            font-size: 1.5em;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .arrow {
+            font-size: 2em;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <h1 class="game-title">🎴 UNO風カードゲーム（多人数対戦）</h1>
+    
+    <!-- セットアップ画面 -->
+    <div id="setupScreen" class="setup-screen">
+        <h2>ゲーム設定</h2>
+        
+        <div class="player-count">
+            <label for="playerCount">プレイヤー数:</label>
+            <select id="playerCount">
+                <option value="2">2人</option>
+                <option value="3">3人</option>
+                <option value="4">4人</option>
+                <option value="5">5人</option>
+                <option value="6">6人</option>
+                <option value="7">7人</option>
+                <option value="8" selected>8人</option>
+            </select>
+        </div>
+
+        <div id="playerNames"></div>
+        
+        <button class="btn btn-success" onclick="startGame()">ゲーム開始</button>
+    </div>
+
+    <!-- ゲーム画面 -->
+    <div id="gameScreen" class="hidden">
+        <div class="players-grid" id="playersGrid"></div>
+        
+        <div class="turn-indicator" id="turnIndicator"></div>
+        
+        <div class="direction-indicator" id="directionIndicator">
+            ゲーム進行方向: <span class="arrow" id="directionArrow">→</span>
+        </div>
+
+        <div class="center-area">
+            <div class="deck" id="deck" onclick="drawCard()">
+                山札<br><span id="deckCount">0</span>
+            </div>
+            <div class="discard-pile" id="discardPile"></div>
+        </div>
+
+        <div class="game-controls">
+            <button class="btn btn-primary" onclick="showSetup()">新しいゲーム</button>
+            <button class="btn btn-secondary" id="drawBtn" onclick="drawCard()">カードを引く</button>
+            <button class="btn btn-secondary" id="endTurnBtn" onclick="endTurn()">ターン終了</button>
+            <button class="btn btn-success" id="unoBtn" onclick="callUno()" style="display: none;">UNO!</button>
+        </div>
+
+        <div id="message" class="message" style="display: none;"></div>
+
+        <div class="current-hand" id="currentHand"></div>
+    </div>
+
+    <script>
+        // ゲーム状態
+        let gameState = {
+            players: [],
+            deck: [],
+            discardPile: [],
+            currentPlayerIndex: 0,
+            direction: 1, // 1: 時計回り, -1: 反時計回り
+            gameOver: false,
+            canDraw: true,
+            hasDrawn: false,
+            unoCallRequired: {}, // プレイヤーIDをキーとしてUNOコールが必要かどうか
+            pendingDraw: 0, // 積み重なったドロー数
+            canStack: false // アクションカードの積み重ねが可能か
+        };
+
+        // カードの色と数字
+        const colors = ['red', 'blue', 'green', 'yellow'];
+        const colorNames = { red: '赤', blue: '青', green: '緑', yellow: '黄' };
+        const numbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        const actionCards = ['skip', 'reverse', 'draw2'];
+        const actionNames = { skip: 'スキップ', reverse: 'リバース', draw2: 'ドロー2' };
+        const wildCardNames = { wild: 'ワイルド', 'wild-draw4': 'ワイルド+4' };
+
+        // セットアップ画面の初期化
+        function initSetup() {
+            const playerCountSelect = document.getElementById('playerCount');
+            playerCountSelect.addEventListener('change', updatePlayerNameInputs);
+            updatePlayerNameInputs();
+        }
+
+        // プレイヤー名入力フィールドを更新
+        function updatePlayerNameInputs() {
+            const playerCount = parseInt(document.getElementById('playerCount').value);
+            const container = document.getElementById('playerNames');
+            container.innerHTML = '';
+
+            for (let i = 1; i <= playerCount; i++) {
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'input-group';
+                inputGroup.innerHTML = `
+                    <label>プレイヤー ${i} の名前:</label>
+                    <input type="text" id="player${i}Name" value="プレイヤー ${i}" maxlength="15">
+                `;
+                container.appendChild(inputGroup);
+            }
+        }
+
+        // デッキを作成
+        function createDeck() {
+            const deck = [];
+            
+            // 各色に0-9の数字カードを作成（0は1枚、1-9は2枚ずつ）
+            colors.forEach(color => {
+                // 0のカードは各色1枚のみ
+                deck.push({ type: 'number', color, number: 0 });
+                // 1-9のカードは各色2枚ずつ
+                for (let number = 1; number <= 9; number++) {
+                    deck.push({ type: 'number', color, number });
+                    deck.push({ type: 'number', color, number });
+                }
+                
+                // アクションカードを各色2枚ずつ追加
+                actionCards.forEach(action => {
+                    deck.push({ type: 'action', color, action });
+                    deck.push({ type: 'action', color, action });
+                });
+            });
+            
+            // ワイルドカードを追加（各4枚）
+            for (let i = 0; i < 4; i++) {
+                deck.push({ type: 'wild', action: 'wild' });
+            }
+            for (let i = 0; i < 4; i++) {
+                deck.push({ type: 'wild', action: 'wild-draw4' });
+            }
+            
+            // デバッグ用：デッキの総数を確認
+            console.log(`デッキ作成完了: 総${deck.length}枚`);
+            
+            return shuffleDeck(deck);
+        }
+
+        // デッキをシャッフル
+        function shuffleDeck(deck) {
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+            return deck;
+        }
+
+        // カードを描画
+        function renderCard(card, clickHandler = null, isClickable = true) {
+            const cardEl = document.createElement('div');
+            let cardClass = 'card ';
+            
+            if (card.type === 'wild') {
+                cardClass += card.action;
+            } else {
+                cardClass += card.color;
+            }
+            
+            cardEl.className = cardClass;
+            if (!isClickable) cardEl.style.cursor = 'default';
+            
+            let cardContent;
+            if (card.type === 'number') {
+                cardContent = `
+                    <div class="number">${card.number}</div>
+                    <div class="color-name">${colorNames[card.color]}</div>
+                `;
+            } else if (card.type === 'action') {
+                cardContent = `
+                    <div class="action">${actionNames[card.action]}</div>
+                    <div class="color-name">${colorNames[card.color]}</div>
+                `;
+            } else if (card.type === 'wild') {
+                cardContent = `
+                    <div class="action">${wildCardNames[card.action]}</div>
+                    <div class="color-name">全色対応</div>
+                `;
+            }
+            
+            cardEl.innerHTML = cardContent;
+            
+            if (clickHandler && isClickable) {
+                cardEl.onclick = clickHandler;
+            }
+            
+            return cardEl;
+        }
+
+        // 現在のプレイヤーの手札を表示
+        function renderCurrentHand() {
+            const handEl = document.getElementById('currentHand');
+            handEl.innerHTML = '';
+            
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            
+            currentPlayer.hand.forEach((card, index) => {
+                const isPlayable = canPlayCard(card);
+                const cardEl = renderCard(card, isPlayable ? () => playCard(index) : null, isPlayable);
+                
+                if (!isPlayable) {
+                    cardEl.classList.add('unplayable');
+                    cardEl.title = 'このカードは出せません';
+                }
+                
+                handEl.appendChild(cardEl);
+            });
+        }
+
+        // プレイヤー情報を表示
+        function renderPlayersGrid() {
+            const gridEl = document.getElementById('playersGrid');
+            gridEl.innerHTML = '';
+            
+            gameState.players.forEach((player, index) => {
+                const playerEl = document.createElement('div');
+                playerEl.className = 'player-info';
+                if (index === gameState.currentPlayerIndex) {
+                    playerEl.classList.add('current-player');
+                }
+                
+                playerEl.innerHTML = `
+                    <div class="player-name">${player.name}</div>
+                    <div class="card-count">${player.hand.length}枚</div>
+                `;
+                
+                gridEl.appendChild(playerEl);
+            });
+        }
+
+        // 捨て札を表示
+        function renderDiscardPile() {
+            const discardEl = document.getElementById('discardPile');
+            discardEl.innerHTML = '';
+            
+            if (gameState.discardPile.length > 0) {
+                const topCard = gameState.discardPile[gameState.discardPile.length - 1];
+                const cardEl = renderCard(topCard, null, false);
+                discardEl.appendChild(cardEl);
+            }
+        }
+
+        // カードがプレイ可能かチェック
+        function canPlayCard(card) {
+            if (gameState.discardPile.length === 0) return true;
+            
+            const topCard = gameState.discardPile[gameState.discardPile.length - 1];
+            
+            // ドローが積み重なっている場合のスタックルール
+            if (gameState.pendingDraw > 0 && gameState.canStack) {
+                // ドロー2でドロー2を積み重ねられる
+                if (card.type === 'action' && card.action === 'draw2' && topCard.type === 'action' && topCard.action === 'draw2') {
+                    return true;
+                }
+                // ワイルドドロー4でワイルドドロー4を積み重ねられる
+                if (card.type === 'wild' && card.action === 'wild-draw4' && topCard.type === 'wild' && topCard.action === 'wild-draw4') {
+                    return true;
+                }
+                // それ以外のカードはプレイ不可
+                return false;
+            }
+            
+            // ワイルドカードは常にプレイ可能
+            if (card.type === 'wild') return true;
+            
+            // 色が一致（ワイルドカードの色が設定されている場合も含む）
+            if (card.color === topCard.color || (topCard.chosenColor && card.color === topCard.chosenColor)) return true;
+            
+            // 数字カード同士で数字が一致
+            if (card.type === 'number' && topCard.type === 'number' && card.number === topCard.number) return true;
+            
+            // アクションカード同士で種類が一致
+            if (card.type === 'action' && topCard.type === 'action' && card.action === topCard.action) return true;
+            
+            return false;
+        }
+
+        // カードをプレイ
+        function playCard(cardIndex) {
+            if (gameState.gameOver) return;
+            
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            const card = currentPlayer.hand[cardIndex];
+            
+            if (!canPlayCard(card)) {
+                showMessage('そのカードは出せません！', 2000);
+                return;
+            }
+            
+            // カードを手札から捨て札に移動
+            currentPlayer.hand.splice(cardIndex, 1);
+            gameState.discardPile.push(card);
+            gameState.canDraw = true;
+            gameState.hasDrawn = false;
+            
+            // 勝利チェック
+            if (currentPlayer.hand.length === 0) {
+                endGame(currentPlayer.name);
+                return;
+            }
+            
+            // UNOコールのチェック（手札が1枚になった時）
+            if (currentPlayer.hand.length === 1) {
+                gameState.unoCallRequired[gameState.currentPlayerIndex] = true;
+                showMessage(`${currentPlayer.name}さんはUNOをコールする必要があります！`, 3000);
+                // UNOボタンを表示
+                document.getElementById('unoBtn').style.display = 'inline-block';
+            }
+            
+            // アクションカードの効果を実行
+            if (card.type === 'action') {
+                executeActionCard(card);
+            } else if (card.type === 'wild') {
+                executeWildCard(card);
+            } else {
+                // 通常の数字カードの場合は次のプレイヤーに進む
+                nextPlayer();
+            }
+        }
+
+        // カードを山札から引く
+        function drawCard() {
+            if (gameState.gameOver) return;
+            
+            if (gameState.deck.length === 0) {
+                const reshuffled = reshuffleDeck();
+                if (!reshuffled || gameState.deck.length === 0) {
+                    showMessage('山札がありません！ゲームを終了します', 3000);
+                    endGame('引き分け');
+                    return;
+                }
+            }
+            
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            const drawnCard = gameState.deck.pop();
+            currentPlayer.hand.push(drawnCard);
+            gameState.hasDrawn = true;
+            
+            showMessage(`${currentPlayer.name}がカードを引きました`, 1500);
+            
+            updateDisplay();
+        }
+
+        // 山札を再シャッフル
+        function reshuffleDeck() {
+            if (gameState.discardPile.length <= 1) {
+                showMessage('リシャッフルできません。捨て札が不足しています', 2000);
+                return false;
+            }
+            
+            // 捨て札の一番上以外を山札に戻す
+            const topCard = gameState.discardPile.pop();
+            const cardsToShuffle = [...gameState.discardPile];
+            gameState.discardPile = [topCard];
+            gameState.deck = shuffleDeck(cardsToShuffle);
+            
+            showMessage(`捨て札${cardsToShuffle.length}枚を山札にシャッフルしました`, 2000);
+            return true;
+        }
+
+        // ターン終了
+        function endTurn() {
+            if (gameState.gameOver) return;
+            
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            const hasPlayableCard = currentPlayer.hand.some(card => canPlayCard(card));
+            
+            // プレイ可能なカードがある場合はカードを出すか引くかする必要がある
+            if (!gameState.hasDrawn && gameState.canDraw && hasPlayableCard) {
+                showMessage('プレイ可能なカードがあります。カードを出すかカードを引いてください', 2000);
+                return;
+            }
+            
+            // プレイ可能なカードがない場合、またはカードを引いた場合はターン終了可能
+            nextPlayer();
+        }
+
+        // アクションカードの効果を実行
+        function executeActionCard(card) {
+            switch (card.action) {
+                case 'skip':
+                    showMessage(`${gameState.players[gameState.currentPlayerIndex].name}がスキップカードを出しました！次のプレイヤーをスキップします`, 2500);
+                    nextPlayer(); // 通常の次のプレイヤーに進む
+                    nextPlayer(); // さらにもう一人飛ばす
+                    break;
+                
+                case 'reverse':
+                    gameState.direction *= -1;
+                    showMessage(`${gameState.players[gameState.currentPlayerIndex].name}がリバースカードを出しました！順番が逆になります`, 2500);
+                    nextPlayer();
+                    break;
+                
+                case 'draw2':
+                    // スタックルールのチェック
+                    if (gameState.pendingDraw > 0 && gameState.canStack) {
+                        gameState.pendingDraw += 2;
+                        showMessage(`${gameState.players[gameState.currentPlayerIndex].name}がドロー2を積み重ねました！総ドロー数: ${gameState.pendingDraw}枚`, 2500);
+                    } else {
+                        gameState.pendingDraw = 2;
+                        gameState.canStack = true;
+                        showMessage(`${gameState.players[gameState.currentPlayerIndex].name}がドロー2カードを出しました！`, 2500);
+                    }
+                    nextPlayer();
+                    // 次のプレイヤーがドロー2を出せない場合の処理はターン開始時に行う
+                    break;
+            }
+        }
+        
+        // ワイルドカードの効果を実行
+        function executeWildCard(card) {
+            // 色選択の処理
+            const chosenColor = prompt('色を選択してください:\n1: 赤 (red)\n2: 青 (blue)\n3: 緑 (green)\n4: 黄 (yellow)', '1');
+            
+            let colorChoice;
+            switch (chosenColor) {
+                case '1': colorChoice = 'red'; break;
+                case '2': colorChoice = 'blue'; break;
+                case '3': colorChoice = 'green'; break;
+                case '4': colorChoice = 'yellow'; break;
+                default: colorChoice = 'red'; // デフォルトは赤
+            }
+            
+            // 捨て札の一番上のカードに選択した色を追加
+            const topCard = gameState.discardPile[gameState.discardPile.length - 1];
+            topCard.chosenColor = colorChoice;
+            
+            if (card.action === 'wild') {
+                showMessage(`${gameState.players[gameState.currentPlayerIndex].name}がワイルドカードを出しました！次の色は${colorNames[colorChoice]}です`, 2500);
+                nextPlayer();
+            } else if (card.action === 'wild-draw4') {
+                // スタックルールのチェック
+                if (gameState.pendingDraw > 0 && gameState.canStack) {
+                    gameState.pendingDraw += 4;
+                    showMessage(`${gameState.players[gameState.currentPlayerIndex].name}がワイルドドロー4を積み重ねました！総ドロー数: ${gameState.pendingDraw}枚。次の色は${colorNames[colorChoice]}です`, 3000);
+                } else {
+                    gameState.pendingDraw = 4;
+                    gameState.canStack = true;
+                    showMessage(`${gameState.players[gameState.currentPlayerIndex].name}がワイルドドロー4を出しました！次の色は${colorNames[colorChoice]}です`, 3000);
+                }
+                nextPlayer();
+            }
+        }
+        
+        // UNOをコールする関数
+        function callUno() {
+            const currentPlayerIndex = gameState.currentPlayerIndex;
+            if (gameState.unoCallRequired[currentPlayerIndex]) {
+                delete gameState.unoCallRequired[currentPlayerIndex];
+                showMessage(`${gameState.players[currentPlayerIndex].name}がUNOをコールしました！`, 2000);
+                document.getElementById('unoBtn').style.display = 'none';
+            }
+        }
+        
+        // 次のプレイヤーに進む
+        function nextPlayer() {
+            // 現在のプレイヤーがUNOコールを忘れた場合のペナルティ
+            const currentPlayerIndex = gameState.currentPlayerIndex;
+            if (gameState.unoCallRequired[currentPlayerIndex]) {
+                const currentPlayer = gameState.players[currentPlayerIndex];
+                showMessage(`${currentPlayer.name}がUNOコールを忘れました！ペナルティで2枚引きます`, 3000);
+                
+                // ペナルティで2枚引く
+                for (let i = 0; i < 2; i++) {
+                    if (gameState.deck.length === 0) {
+                        const reshuffled = reshuffleDeck();
+                        if (!reshuffled) break;
+                    }
+                    if (gameState.deck.length > 0) {
+                        currentPlayer.hand.push(gameState.deck.pop());
+                    }
+                }
+                
+                delete gameState.unoCallRequired[currentPlayerIndex];
+            }
+            
+            gameState.currentPlayerIndex = (gameState.currentPlayerIndex + gameState.direction + gameState.players.length) % gameState.players.length;
+            gameState.canDraw = true;
+            gameState.hasDrawn = false;
+            
+            // UNOボタンを非表示
+            document.getElementById('unoBtn').style.display = 'none';
+            
+            // ドローカードの積み重ね処理
+            const newCurrentPlayer = gameState.players[gameState.currentPlayerIndex];
+            if (gameState.pendingDraw > 0) {
+                // 現在のプレイヤーがスタック可能なカードを持っているかチェック
+                const topCard = gameState.discardPile[gameState.discardPile.length - 1];
+                let canStackCard = false;
+                
+                if (topCard.type === 'action' && topCard.action === 'draw2') {
+                    canStackCard = newCurrentPlayer.hand.some(card => card.type === 'action' && card.action === 'draw2');
+                } else if (topCard.type === 'wild' && topCard.action === 'wild-draw4') {
+                    canStackCard = newCurrentPlayer.hand.some(card => card.type === 'wild' && card.action === 'wild-draw4');
+                }
+                
+                if (!canStackCard || !gameState.canStack) {
+                    // スタックできないのでカードを引く
+                    for (let i = 0; i < gameState.pendingDraw; i++) {
+                        if (gameState.deck.length === 0) {
+                            const reshuffled = reshuffleDeck();
+                            if (!reshuffled) break;
+                        }
+                        if (gameState.deck.length > 0) {
+                            newCurrentPlayer.hand.push(gameState.deck.pop());
+                        }
+                    }
+                    showMessage(`${newCurrentPlayer.name}が${gameState.pendingDraw}枚引きました。ターンをスキップします`, 2500);
+                    gameState.pendingDraw = 0;
+                    gameState.canStack = false;
+                    // もう一度次のプレイヤーに進む
+                    gameState.currentPlayerIndex = (gameState.currentPlayerIndex + gameState.direction + gameState.players.length) % gameState.players.length;
+                }
+            }
+            
+            updateDisplay();
+        }
+
+        // ゲーム終了
+        function endGame(winnerName) {
+            gameState.gameOver = true;
+            
+            if (winnerName === '引き分け') {
+                document.getElementById('turnIndicator').innerHTML = `<div class="winner">🤝 引き分けです</div>`;
+                showMessage('山札が足りなくなりました。新しいゲームを開始してください', 5000);
+            } else {
+                document.getElementById('turnIndicator').innerHTML = `<div class="winner">🎉 ${winnerName}さんの勝利！</div>`;
+                showMessage('おめでとうございます！新しいゲームボタンを押して再度プレイしてください', 5000);
+            }
+            
+            // ゲーム終了時にすべてのボタンを無効化
+            document.getElementById('drawBtn').disabled = true;
+            document.getElementById('endTurnBtn').disabled = true;
+        }
+
+        // メッセージを表示
+        function showMessage(text, duration = 3000) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.style.display = 'block';
+            
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, duration);
+        }
+
+        // 画面を更新
+        function updateDisplay() {
+            renderCurrentHand();
+            renderPlayersGrid();
+            renderDiscardPile();
+            
+            document.getElementById('deckCount').textContent = gameState.deck.length;
+            
+            if (!gameState.gameOver) {
+                const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+                document.getElementById('turnIndicator').textContent = `${currentPlayer.name}さんのターンです`;
+            }
+            
+            // 方向インジケーターを更新
+            document.getElementById('directionArrow').textContent = gameState.direction === 1 ? '→' : '←';
+            
+            document.getElementById('drawBtn').disabled = gameState.gameOver || gameState.hasDrawn;
+            document.getElementById('endTurnBtn').disabled = gameState.gameOver;
+        }
+
+        // ゲーム開始
+        function startGame() {
+            const playerCount = parseInt(document.getElementById('playerCount').value);
+            
+            // プレイヤー情報を収集
+            gameState.players = [];
+            for (let i = 1; i <= playerCount; i++) {
+                const name = document.getElementById(`player${i}Name`).value.trim() || `プレイヤー ${i}`;
+                gameState.players.push({
+                    name: name,
+                    hand: []
+                });
+            }
+            
+            // ゲーム状態をリセット
+            gameState.deck = createDeck();
+            gameState.discardPile = [];
+            gameState.currentPlayerIndex = 0;
+            gameState.direction = 1;
+            gameState.gameOver = false;
+            gameState.canDraw = true;
+            gameState.hasDrawn = false;
+            gameState.unoCallRequired = {};
+            gameState.pendingDraw = 0;
+            gameState.canStack = false;
+            
+            // 手札を配る（各プレイヤーに7枚ずつ）
+            for (let i = 0; i < 7; i++) {
+                gameState.players.forEach(player => {
+                    if (gameState.deck.length > 0) {
+                        player.hand.push(gameState.deck.pop());
+                    }
+                });
+            }
+            
+            // 最初の捨て札を置く（アクションカードやワイルドカードは避ける）
+            let firstCard;
+            do {
+                if (gameState.deck.length === 0) break;
+                firstCard = gameState.deck.pop();
+            } while (firstCard && (firstCard.type === 'action' || firstCard.type === 'wild'));
+            
+            if (firstCard) {
+                gameState.discardPile.push(firstCard);
+            } else if (gameState.deck.length > 0) {
+                // もしも数字カードが見つからない場合は最初のカードを使用
+                gameState.discardPile.push(gameState.deck.pop());
+            }
+            
+            // 画面切り替え
+            document.getElementById('setupScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            
+            updateDisplay();
+            showMessage('ゲームが始まりました！', 2000);
+        }
+
+        // セットアップ画面に戻る
+        function showSetup() {
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('setupScreen').classList.remove('hidden');
+        }
+
+        // 初期化
+        initSetup();
+    </script>
+</body>
+</html>
