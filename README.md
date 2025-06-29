@@ -151,7 +151,7 @@ open test_results.html
 
 ## 🐛 バグレポート・機能要望
 
-バグを発見した場合や新機能の要望がある場合は、[Issues](https://github.com/your-username/UNO-like-card_game/issues) でお知らせください。
+バグを発見した場合や新機能の要望がある場合は、[Issues](https://github.com/SilentMalachite/UNO-like-card_game/issues) でお知らせください。
 
 ### バグレポートに含めてほしい情報
 - 使用ブラウザとバージョン
@@ -171,9 +171,9 @@ open test_results.html
 
 ## 👥 作者
 
-**あなたの名前** - [@your-username](https://github.com/your-username)
+**あなたの名前** - [@your-username](https://github.com/SilentMalachite/)
 
-プロジェクトリンク: [https://github.com/your-username/UNO-like-card_game](https://github.com/your-username/UNO-like-card_game)
+プロジェクトリンク: [https://github.com/your-username/UNO-like-card_game](https://github.com/SilentMalachite/UNO-like-card_game)
 
 ## 🙏 謝辞
 
